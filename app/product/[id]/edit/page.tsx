@@ -1,8 +1,9 @@
 import CreateForm from '@/app/_components/CreateForm'
 import { getProductById } from '@/app/actions/products-actions';
-import { Params } from 'next/dist/server/request/params';
 import { redirect } from 'next/navigation';
 import React from 'react'
+
+type Params = Promise<{ id: string }>;
 
 export default async function page({
     params,
