@@ -7,7 +7,9 @@ import { uploadImage } from "./upload-actions";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts(): Promise<Response<Product[]>> {
-    const res = await fetch(`${process.env.API_URL}/products`);
+    const res = await fetch(`${process.env.API_URL}/products`, {
+        cache: "no-store",
+    });
     if (!res.ok) {
         throw new Error("Error al obtener los productos");
     }
@@ -16,7 +18,9 @@ export async function getProducts(): Promise<Response<Product[]>> {
 
 
 export async function getProductById(id: string): Promise<Response<Product>> {
-    const res = await fetch(`${process.env.API_URL}/products/${id}`);
+    const res = await fetch(`${process.env.API_URL}/products/${id}`, {
+        cache: "no-store",
+    });
     if (!res.ok) {
         throw new Error("Error al obtener el producto");
     }
@@ -24,7 +28,9 @@ export async function getProductById(id: string): Promise<Response<Product>> {
 }
 
 
-export async function createProduct(formData: FormData) {
+export async function createProduct(formData: FormData): Promise<{
+    message: string;
+} | void> {
     const file = formData.get("urlImage") as File;
     const response = await uploadImage(file);
 
@@ -41,36 +47,41 @@ export async function createProduct(formData: FormData) {
             "Content-Type": "application/json",
         },
         body: JSON.stringify(product),
+        cache: "no-store",
     });
     if (!res.ok) {
-        throw new Error("Error al crear el producto");
+
+        return {
+            message: "Error al crear el producto",
+        }
     }
 
     return redirect(`/`);
 }
 
-export async function updateProduct(formData: FormData): Promise<void> {
+export async function updateProduct(formData: FormData): Promise<{
+    message: string;
+} | void> {
     const id = formData.get("id") as string;
     const file = formData.get("urlImage") as File;
-    if (!file) {
-        throw new Error("Error al obtener la imagen");
+
+    let response;
+    if (file.size > 0) {
+        response = await uploadImage(file);
     }
-
-    const response = await uploadImage(file);
-
 
     const product = {
         name: formData.get("name"),
         description: formData.get("description"),
-        urlImage: response.url,
+        urlImage: response?.url,
     };
 
 
-    if (!product.name || !product.description || !product.urlImage) {
-        throw new Error("Error los campos son obligatorios");
+    if (!product.name || !product.description) {
+        return {
+            message: "Los campos son obligatorios",
+        }
     }
-
-
 
     const res = await fetch(`${process.env.API_URL}/products/${id}`, {
         method: "PATCH",
@@ -78,21 +89,29 @@ export async function updateProduct(formData: FormData): Promise<void> {
             "Content-Type": "application/json",
         },
         body: JSON.stringify(product),
+        cache: "no-store",
     });
     if (!res.ok) {
-        throw new Error("Error al actualizar el producto");
+        return {
+            message: "Error al actualizar el producto",
+        }
     }
 
-    revalidatePath("/");
+    redirect("/");
 }
 
-export async function deleteProduct(formData: FormData): Promise<void> {
+export async function deleteProduct(formData: FormData): Promise<{
+    message: string;
+} | void> {
     const id = formData.get("id") as string;
     const res = await fetch(`${process.env.API_URL}/products/${id}`, {
         method: "DELETE",
+        cache: "no-store",
     });
     if (!res.ok) {
-        throw new Error("Error al eliminar el producto");
+        return {
+            message: "Error al eliminar el producto",
+        }
     }
     revalidatePath("/")
 }
